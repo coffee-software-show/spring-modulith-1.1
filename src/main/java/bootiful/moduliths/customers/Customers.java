@@ -62,6 +62,10 @@ class Customers {
                 });
     }
 
+    Collection<Customer> all() {
+        return this.repository.findAll();
+    }
+
     private boolean validUsername(String username) {
         var nc = new StringBuilder();
         for (var c : username.toCharArray())
@@ -69,15 +73,10 @@ class Customers {
                 nc.append(c);
         return username.equalsIgnoreCase(nc.toString());
     }
-
-    Collection<Customer> all() {
-        return this.repository.findAll();
-    }
 }
 
 record Customer(@Id Integer id, String first, String last, String username) {
 }
-
 
 interface CustomerRepository extends ListCrudRepository<Customer, Integer> {
 }
