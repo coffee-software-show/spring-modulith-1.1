@@ -1,0 +1,15 @@
+
+type Query {
+ customers: [Customer]
+}
+
+type Mutation {
+ create (first:String, last:String, username:String) : Customer
+}
+
+type Customer {
+ id: ID
+ first :String
+ last :String
+ username:String
+}
