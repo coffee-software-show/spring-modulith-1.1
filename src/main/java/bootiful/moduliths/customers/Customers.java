@@ -8,11 +8,9 @@ import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.util.Assert;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
-import java.util.stream.Stream;
 
 @Controller
 class CustomerGraphqlController {
@@ -36,42 +34,26 @@ class CustomerGraphqlController {
 }
 
 @Service
+@Transactional
 class Customers {
 
-    private final TransactionTemplate transactionTemplate;
     private final CustomerRepository repository;
     private final ApplicationEventPublisher publisher;
 
-    Customers(TransactionTemplate transactionTemplate,
-              CustomerRepository repository, ApplicationEventPublisher publisher) {
-        this.transactionTemplate = transactionTemplate;
+    Customers(CustomerRepository repository, ApplicationEventPublisher publisher) {
         this.repository = repository;
         this.publisher = publisher;
     }
 
     Customer create(String first, String last, String username) {
-        Stream.of(first, last, username).forEach(p -> Assert.hasText(p,
-                "you must provide a value, but you provided [" + p + "]"));
-        Assert.isTrue(validUsername(username), "your username must contain only valid letters and digits");
-        var customer = new Customer(null, first, last, username);
-        return this.transactionTemplate
-                .execute(status -> {
-                    var c = this.repository.save(customer);
-                    publisher.publishEvent(new CustomerCreatedEvent(c.id(), c.first(), c.last(), c.username()));
-                    return c;
-                });
+        var customer = this.repository.save(new Customer(null, first, last, username));
+        publisher.publishEvent(new CustomerCreatedEvent(
+                customer.id(), customer.first(), customer.last(), customer.username()));
+        return customer;
     }
 
     Collection<Customer> all() {
         return this.repository.findAll();
-    }
-
-    private boolean validUsername(String username) {
-        var nc = new StringBuilder();
-        for (var c : username.toCharArray())
-            if (Character.isLetterOrDigit(c))
-                nc.append(c);
-        return username.equalsIgnoreCase(nc.toString());
     }
 }
 
