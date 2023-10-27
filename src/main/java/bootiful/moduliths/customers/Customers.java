@@ -1,6 +1,10 @@
 package bootiful.moduliths.customers;
 
+import org.springframework.amqp.core.*;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.repository.ListCrudRepository;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -38,6 +42,7 @@ class CustomerGraphqlController {
 class Customers {
 
     private final CustomerRepository repository;
+
     private final ApplicationEventPublisher publisher;
 
     Customers(CustomerRepository repository, ApplicationEventPublisher publisher) {
@@ -61,4 +66,43 @@ record Customer(@Id Integer id, String first, String last, String username) {
 }
 
 interface CustomerRepository extends ListCrudRepository<Customer, Integer> {
+}
+
+@Configuration
+class CustomersAmqpConfiguration {
+
+    static final String CUSTOMER_CREATED_DESTINATION_NAME = "customer-created-events";
+
+    static final String CUSTOMER_CREATED_DESTINATION_NAME_EXPRESSION =
+            CUSTOMER_CREATED_DESTINATION_NAME + "::#{'" + CUSTOMER_CREATED_DESTINATION_NAME + "'}";
+
+    @Bean
+    InitializingBean initializingBean(Exchange customersCreatedExchange, Binding customersCreatedBinding, Queue customersCreatedQueue, AmqpAdmin amqpAdmin) {
+        return () -> {
+            amqpAdmin.declareQueue(customersCreatedQueue);
+            amqpAdmin.declareExchange(customersCreatedExchange);
+            amqpAdmin.declareBinding(customersCreatedBinding);
+        };
+    }
+
+    @Bean
+    Queue customersCreatedQueue() {
+        return QueueBuilder.durable(CUSTOMER_CREATED_DESTINATION_NAME)
+                .build();
+    }
+
+    @Bean
+    Exchange customersCreatedExchange() {
+        return ExchangeBuilder.directExchange(CUSTOMER_CREATED_DESTINATION_NAME)
+                .build();
+    }
+
+    @Bean
+    Binding customersCreatedBinding(Queue customersCreatedQueue, Exchange customersCreatedExchange) {
+        return BindingBuilder
+                .bind(customersCreatedQueue)
+                .to(customersCreatedExchange)
+                .with(CUSTOMER_CREATED_DESTINATION_NAME)
+                .noargs();
+    }
 }
