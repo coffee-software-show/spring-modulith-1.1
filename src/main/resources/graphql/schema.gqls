@@ -1,0 +1,31 @@
+type Query {
+    customers: [Customer]
+    products : [Product]
+}
+
+type Mutation {
+    createCustomer (first:String, last:String, username:String) : Customer
+    placeOrder( customerId: ID , productId: ID): Order
+
+}
+
+type Product {
+    id: ID
+    sku: String
+    inStock : Int
+}
+
+type Customer {
+    id: ID
+    first :String
+    last :String
+    username:String
+    orders: [Order]
+}
+
+
+type Order  {
+    id: ID
+    customerId: ID
+    productId: ID
+}

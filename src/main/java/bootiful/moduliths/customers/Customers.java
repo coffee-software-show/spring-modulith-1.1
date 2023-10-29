@@ -6,10 +6,13 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Table;
 import org.springframework.data.repository.ListCrudRepository;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SchemaMapping;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,16 +28,20 @@ class CustomerGraphqlController {
         this.customers = customers;
     }
 
+    @SchemaMapping
+    Collection<Order> orders(Customer customer) {
+        return this.customers.ordersForCustomer(customer.id());
+    }
+
     @QueryMapping
     Collection<Customer> customers() {
         return this.customers.all();
     }
 
     @MutationMapping
-    Customer create(@Argument String first, @Argument String last, @Argument String username) {
-        return this.customers.create(first, last, username);
+    Customer createCustomer(@Argument String first, @Argument String last, @Argument String username) {
+        return this.customers.createCustomer(first, last, username);
     }
-
 }
 
 @Service
@@ -42,19 +49,34 @@ class CustomerGraphqlController {
 class Customers {
 
     private final CustomerRepository repository;
-
     private final ApplicationEventPublisher publisher;
+    private final JdbcClient jdbc;
 
-    Customers(CustomerRepository repository, ApplicationEventPublisher publisher) {
+    Customers(CustomerRepository repository, ApplicationEventPublisher publisher, JdbcClient jdbc) {
         this.repository = repository;
         this.publisher = publisher;
+        this.jdbc = jdbc;
     }
 
-    Customer create(String first, String last, String username) {
+    Customer createCustomer(String first, String last, String username) {
         var customer = this.repository.save(new Customer(null, first, last, username));
         publisher.publishEvent(new CustomerCreatedEvent(
                 customer.id(), customer.first(), customer.last(), customer.username()));
         return customer;
+    }
+
+    Collection<Order> ordersForCustomer(Integer customerId) {
+        return this.jdbc
+                .sql(
+                        "select * from customer_orders where customer_fk = ?"
+                )
+                .param(customerId)
+                .query((rs, rowNum) -> new Order(
+                        rs.getInt("id"),
+                        rs.getInt("customer_fk"),
+                        rs.getInt("product_fk")
+                ))
+                .list();
     }
 
     Collection<Customer> all() {
@@ -62,6 +84,11 @@ class Customers {
     }
 }
 
+
+record Order(Integer id, Integer customerId, Integer productId) {
+}
+
+@Table("customers")
 record Customer(@Id Integer id, String first, String last, String username) {
 }
 
@@ -77,7 +104,7 @@ class CustomersAmqpConfiguration {
             CUSTOMER_CREATED_DESTINATION_NAME + "::#{'" + CUSTOMER_CREATED_DESTINATION_NAME + "'}";
 
     @Bean
-    InitializingBean initializingBean(Exchange customersCreatedExchange, Binding customersCreatedBinding, Queue customersCreatedQueue, AmqpAdmin amqpAdmin) {
+    InitializingBean customersAmqpConfigurationInitialization(Exchange customersCreatedExchange, Binding customersCreatedBinding, Queue customersCreatedQueue, AmqpAdmin amqpAdmin) {
         return () -> {
             amqpAdmin.declareQueue(customersCreatedQueue);
             amqpAdmin.declareExchange(customersCreatedExchange);
