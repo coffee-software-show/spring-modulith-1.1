@@ -22,68 +22,64 @@ import java.util.Collection;
 @Controller
 class CustomerGraphqlController {
 
-    private final Customers customers;
+	private final Customers customers;
 
-    CustomerGraphqlController(Customers customers) {
-        this.customers = customers;
-    }
+	CustomerGraphqlController(Customers customers) {
+		this.customers = customers;
+	}
 
-    @SchemaMapping
-    Collection<Order> orders(Customer customer) {
-        return this.customers.ordersForCustomer(customer.id());
-    }
+	@SchemaMapping
+	Collection<Order> orders(Customer customer) {
+		return this.customers.ordersForCustomer(customer.id());
+	}
 
-    @QueryMapping
-    Collection<Customer> customers() {
-        return this.customers.all();
-    }
+	@QueryMapping
+	Collection<Customer> customers() {
+		return this.customers.all();
+	}
 
-    @MutationMapping
-    Customer createCustomer(@Argument String first, @Argument String last, @Argument String username) {
-        return this.customers.createCustomer(first, last, username);
-    }
+	@MutationMapping
+	Customer createCustomer(@Argument String first, @Argument String last, @Argument String username) {
+		return this.customers.createCustomer(first, last, username);
+	}
+
 }
 
 @Service
 @Transactional
 class Customers {
 
-    private final CustomerRepository repository;
-    private final ApplicationEventPublisher publisher;
-    private final JdbcClient jdbc;
+	private final CustomerRepository repository;
 
-    Customers(CustomerRepository repository, ApplicationEventPublisher publisher, JdbcClient jdbc) {
-        this.repository = repository;
-        this.publisher = publisher;
-        this.jdbc = jdbc;
-    }
+	private final ApplicationEventPublisher publisher;
 
-    Customer createCustomer(String first, String last, String username) {
-        var customer = this.repository.save(new Customer(null, first, last, username));
-        publisher.publishEvent(new CustomerCreatedEvent(
-                customer.id(), customer.first(), customer.last(), customer.username()));
-        return customer;
-    }
+	private final JdbcClient jdbc;
 
-    Collection<Order> ordersForCustomer(Integer customerId) {
-        return this.jdbc
-                .sql(
-                    "select * from customer_orders where customer_fk = ?"
-                )
-                .param(customerId)
-                .query((rs, rowNum) -> new Order(
-                        rs.getInt("id"),
-                        rs.getInt("customer_fk"),
-                        rs.getInt("product_fk")
-                ))
-                .list();
-    }
+	Customers(CustomerRepository repository, ApplicationEventPublisher publisher, JdbcClient jdbc) {
+		this.repository = repository;
+		this.publisher = publisher;
+		this.jdbc = jdbc;
+	}
 
-    Collection<Customer> all() {
-        return this.repository.findAll();
-    }
+	Customer createCustomer(String first, String last, String username) {
+		var customer = this.repository.save(new Customer(null, first, last, username));
+		publisher.publishEvent(
+				new CustomerCreatedEvent(customer.id(), customer.first(), customer.last(), customer.username()));
+		return customer;
+	}
+
+	Collection<Order> ordersForCustomer(Integer customerId) {
+		return this.jdbc.sql("select * from customer_orders where customer_fk = ?")
+			.param(customerId)
+			.query((rs, rowNum) -> new Order(rs.getInt("id"), rs.getInt("customer_fk"), rs.getInt("product_fk")))
+			.list();
+	}
+
+	Collection<Customer> all() {
+		return this.repository.findAll();
+	}
+
 }
-
 
 record Order(Integer id, Integer customerId, Integer productId) {
 }
@@ -93,43 +89,43 @@ record Customer(@Id Integer id, String first, String last, String username) {
 }
 
 interface CustomerRepository extends ListCrudRepository<Customer, Integer> {
+
 }
 
 @Configuration
 class CustomersAmqpConfiguration {
 
-    static final String CUSTOMER_CREATED_DESTINATION_NAME = "customer-created-events";
+	static final String CUSTOMER_CREATED_DESTINATION_NAME = "customer-created-events";
 
-    static final String CUSTOMER_CREATED_DESTINATION_NAME_EXPRESSION =
-            CUSTOMER_CREATED_DESTINATION_NAME + "::#{'" + CUSTOMER_CREATED_DESTINATION_NAME + "'}";
+	static final String CUSTOMER_CREATED_DESTINATION_NAME_EXPRESSION = CUSTOMER_CREATED_DESTINATION_NAME + "::#{'"
+			+ CUSTOMER_CREATED_DESTINATION_NAME + "'}";
 
-    @Bean
-    InitializingBean customersAmqpConfigurationInitialization(Exchange customersCreatedExchange, Binding customersCreatedBinding, Queue customersCreatedQueue, AmqpAdmin amqpAdmin) {
-        return () -> {
-            amqpAdmin.declareQueue(customersCreatedQueue);
-            amqpAdmin.declareExchange(customersCreatedExchange);
-            amqpAdmin.declareBinding(customersCreatedBinding);
-        };
-    }
+	@Bean
+	InitializingBean customersAmqpConfigurationInitialization(Exchange customersCreatedExchange,
+			Binding customersCreatedBinding, Queue customersCreatedQueue, AmqpAdmin amqpAdmin) {
+		return () -> {
+			amqpAdmin.declareQueue(customersCreatedQueue);
+			amqpAdmin.declareExchange(customersCreatedExchange);
+			amqpAdmin.declareBinding(customersCreatedBinding);
+		};
+	}
 
-    @Bean
-    Queue customersCreatedQueue() {
-        return QueueBuilder.durable(CUSTOMER_CREATED_DESTINATION_NAME)
-                .build();
-    }
+	@Bean
+	Queue customersCreatedQueue() {
+		return QueueBuilder.durable(CUSTOMER_CREATED_DESTINATION_NAME).build();
+	}
 
-    @Bean
-    Exchange customersCreatedExchange() {
-        return ExchangeBuilder.directExchange(CUSTOMER_CREATED_DESTINATION_NAME)
-                .build();
-    }
+	@Bean
+	Exchange customersCreatedExchange() {
+		return ExchangeBuilder.directExchange(CUSTOMER_CREATED_DESTINATION_NAME).build();
+	}
 
-    @Bean
-    Binding customersCreatedBinding(Queue customersCreatedQueue, Exchange customersCreatedExchange) {
-        return BindingBuilder
-                .bind(customersCreatedQueue)
-                .to(customersCreatedExchange)
-                .with(CUSTOMER_CREATED_DESTINATION_NAME)
-                .noargs();
-    }
+	@Bean
+	Binding customersCreatedBinding(Queue customersCreatedQueue, Exchange customersCreatedExchange) {
+		return BindingBuilder.bind(customersCreatedQueue)
+			.to(customersCreatedExchange)
+			.with(CUSTOMER_CREATED_DESTINATION_NAME)
+			.noargs();
+	}
+
 }

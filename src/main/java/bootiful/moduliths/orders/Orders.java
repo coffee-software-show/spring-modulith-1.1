@@ -17,51 +17,51 @@ import java.util.Collection;
 @Controller
 class OrdersController {
 
-    private final Orders orders;
+	private final Orders orders;
 
-    OrdersController(Orders orders) {
-        this.orders = orders;
-    }
+	OrdersController(Orders orders) {
+		this.orders = orders;
+	}
 
-    @QueryMapping
-    Collection<Order> orders() {
-        return this.orders.orders();
-    }
+	@QueryMapping
+	Collection<Order> orders() {
+		return this.orders.orders();
+	}
 
-    @MutationMapping
-    Order placeOrder(
-            @Argument Integer customerId,
-            @Argument Integer productId) {
-        return this.orders.place(customerId, productId);
-    }
+	@MutationMapping
+	Order placeOrder(@Argument Integer customerId, @Argument Integer productId) {
+		return this.orders.place(customerId, productId);
+	}
+
 }
 
 @Service
 @Transactional
 class Orders {
 
-    private final ApplicationEventPublisher publisher;
+	private final ApplicationEventPublisher publisher;
 
-    private final OrderRepository repository;
+	private final OrderRepository repository;
 
-    Orders(ApplicationEventPublisher publisher, OrderRepository repository) {
-        this.publisher = publisher;
-        this.repository = repository;
-    }
+	Orders(ApplicationEventPublisher publisher, OrderRepository repository) {
+		this.publisher = publisher;
+		this.repository = repository;
+	}
 
-    Collection<Order> orders() {
-        return this.repository.findAll();
-    }
+	Collection<Order> orders() {
+		return this.repository.findAll();
+	}
 
-    Order place(Integer customerId, Integer productId) {
-        var saved = this.repository.save(new Order(null, customerId, productId));
-        this.publisher.publishEvent(new OrderPlacedEvent(saved.id(),
-                customerId, productId));
-        return saved;
-    }
+	Order place(Integer customerId, Integer productId) {
+		var saved = this.repository.save(new Order(null, customerId, productId));
+		this.publisher.publishEvent(new OrderPlacedEvent(saved.id(), customerId, productId));
+		return saved;
+	}
+
 }
 
 interface OrderRepository extends ListCrudRepository<Order, Integer> {
+
 }
 
 @Table("customer_orders")

@@ -8,24 +8,22 @@ import org.springframework.stereotype.Controller;
 
 import java.util.Collection;
 
-
 @Controller
 class ProductController {
 
-    private final ProductRepository repository;
+	private final ProductRepository repository;
 
-    ProductController(ProductRepository repository) {
-        this.repository = repository;
-    }
+	ProductController(ProductRepository repository) {
+		this.repository = repository;
+	}
 
-    @QueryMapping
-    Collection<Product> products() {
-        return this.repository.findAll();
-    }
+	@QueryMapping
+	Collection<Product> products() {
+		return this.repository.findAll();
+	}
+
 }
-
-
 
 interface ProductRepository extends ListCrudRepository<Product, Integer> {
-}
 
+}
