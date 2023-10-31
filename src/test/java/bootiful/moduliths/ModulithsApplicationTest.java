@@ -12,4 +12,6 @@ class ModulithsApplicationTest {
     void verify()  {
         this.applicationModules.verify();
     }
+
+
 }

@@ -12,7 +12,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.Collection;
 
 @Controller
@@ -66,6 +65,5 @@ interface OrderRepository extends ListCrudRepository<Order, Integer> {
 }
 
 @Table("customer_orders")
-record Order(@Id Integer id, @Column ("customer_fk") Integer customerId,
-             @Column ("product_fk") Integer inventoryId) {
+record Order(@Id Integer id, @Column("customer_fk") Integer customerId, @Column("product_fk") Integer inventoryId) {
 }

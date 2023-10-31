@@ -68,7 +68,7 @@ class Customers {
     Collection<Order> ordersForCustomer(Integer customerId) {
         return this.jdbc
                 .sql(
-                        "select * from customer_orders where customer_fk = ?"
+                    "select * from customer_orders where customer_fk = ?"
                 )
                 .param(customerId)
                 .query((rs, rowNum) -> new Order(
