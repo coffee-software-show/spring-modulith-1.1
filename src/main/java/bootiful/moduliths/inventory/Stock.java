@@ -1,6 +1,7 @@
 package bootiful.moduliths.inventory;
 
 import bootiful.moduliths.orders.OrderPlacedEvent;
+import bootiful.moduliths.products.Product;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
@@ -45,11 +46,17 @@ class Stock {
     }
 
     int stockInInventoryFor(Integer productId) {
-        return this.jdbc
+        var inv = this.jdbc
                 .sql("select quantity_in_stock from stock where product_fk = ? ")
                 .param(productId)
                 .query((rs, i) -> rs.getInt("quantity_in_stock"))
-                .single();
+                .list();
+        if (!inv.isEmpty()) {
+            var ct = inv.iterator().next();
+            return ct;
+        }
+        return 0;
+
     }
 }
 
@@ -60,9 +67,6 @@ class StockController {
 
     StockController(Stock stock) {
         this.stock = stock;
-    }
-
-    record Product(Integer id) {
     }
 
     @SchemaMapping(typeName = "Product")

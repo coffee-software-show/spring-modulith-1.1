@@ -29,6 +29,3 @@ class ProductController {
 interface ProductRepository extends ListCrudRepository<Product, Integer> {
 }
 
-@Table("products")
-record Product(@Id Integer id, String sku, long inStock) {
-}
