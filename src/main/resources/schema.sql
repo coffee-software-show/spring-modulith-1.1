@@ -28,5 +28,5 @@ create table if not exists stock
 (
     id                serial primary key,
     product_fk        bigint not null references products (id) unique,
-    quantity_in_stock bigint not null default 100 check ( quantity_in_stock >= 0 )
+    quantity_in_stock bigint not null default 10  check ( quantity_in_stock >= 0 )
 );

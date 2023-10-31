@@ -29,7 +29,7 @@ class Stock {
     @ApplicationModuleListener
     void updateInventoryOn(OrderPlacedEvent ope) {
 
-        log.info("order placed!" + ope.toString());
+        log.info("order placed! " + ope.toString());
 
         this.jdbc.sql(
                         """
@@ -43,6 +43,9 @@ class Stock {
                 )
                 .param(ope.productId())
                 .update();
+
+        log.info("finished write to stock table");
+
     }
 
     int stockInInventoryFor(Integer productId) {
@@ -68,6 +71,8 @@ class StockController {
     StockController(Stock stock) {
         this.stock = stock;
     }
+
+    // todo why is this value in particular wrong?/
 
     @SchemaMapping(typeName = "Product")
     int inStock(Product product) {
