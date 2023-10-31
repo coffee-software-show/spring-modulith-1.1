@@ -1,7 +1,7 @@
 drop table if exists customers cascade;
 drop table if exists products cascade;
 drop table if exists customer_orders cascade;
-drop table if exists stock cascade  ;
+drop table if exists stock cascade;
 
 create table if not exists customers
 (
@@ -13,9 +13,8 @@ create table if not exists customers
 
 create table if not exists products
 (
-    id       serial primary key,
-    sku      varchar(255) not null,
-    in_stock bigint       not null check ( in_stock >= 0 )
+    id  serial primary key,
+    sku varchar(255) not null
 );
 
 create table if not exists customer_orders
@@ -28,6 +27,6 @@ create table if not exists customer_orders
 create table if not exists stock
 (
     id                serial primary key,
-    product_fk        bigint not null references products (id) unique ,
+    product_fk        bigint not null references products (id) unique,
     quantity_in_stock bigint not null default 100 check ( quantity_in_stock >= 0 )
-) ;
+);
